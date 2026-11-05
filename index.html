@@ -148,6 +148,84 @@ Total 35000"
   <script>
     let rowCount = 0;
 
+    // ============= SESSION STORAGE =============
+    // Simpan state form ke sessionStorage setiap kali ada perubahan
+    function saveFormState() {
+      const state = {
+        pemesan: document.querySelector('input[name="pemesan"]')?.value.trim() || "",
+        date: document.getElementById("orderDate")?.value || "",
+        catatan: document.getElementById("catatanInput")?.value.trim() || "",
+        rowCount: rowCount,
+        items: []
+      };
+
+      // Kumpul data item row
+      const itemDivs = document.querySelectorAll("#itemsContainer > div");
+      itemDivs.forEach((div) => {
+        const number = div.dataset.rowId ? parseInt(div.dataset.rowId) : 0;
+        const nama = div.querySelector('input[name="nama"]')?.value.trim() || "";
+        const jumlah = div.querySelector('input[name="jumlah"]')?.value.trim() || "";
+        const satuan = div.querySelector('input[name="satuan"]')?.value.trim() || "";
+        const harga = parseInt(div.querySelector('input[name="harga"]')?.value) || 0;
+
+        if (nama || jumlah || harga) {
+          state.items.push({ number, nama, jumlah, satuan, harga });
+        }
+      });
+
+      sessionStorage.setItem("formState", JSON.stringify(state));
+    }
+
+    // Muat state form dari sessionStorage
+    function loadFormState() {
+      const saved = sessionStorage.getItem("formState");
+      if (!saved) return;
+
+      const state = JSON.parse(saved);
+
+      // Muat pemesan dan tanggal
+      if (state.pemesan) {
+        document.querySelector('input[name="pemesan"]').value = state.pemesan;
+      }
+      if (state.date) {
+        document.getElementById("orderDate").value = state.date;
+      }
+      if (state.catatan) {
+        document.getElementById("catatanInput").value = state.catatan;
+      }
+
+      // Muat item rows
+      if (state.items && state.items.length > 0) {
+        // Clear existing items (kepala form sudah menambah 1 row default)
+        // But we need to handle the default row added on init
+        // Better approach: clear and reload all items
+        document.getElementById("itemsContainer").innerHTML = "";
+
+        // Sort items by number ascending, then prepend (so newest stays on top)
+        const sorted = [...state.items].sort((a, b) => a.number - b.number);
+        rowCount = 0;
+
+        sorted.forEach((item) => {
+          rowCount++;
+          addRowWithData(item.jumlah, item.satuan, item.nama, item.harga);
+          // Set the number label
+          const newRow = document.querySelector(`#itemsContainer > div[data-row-id="${rowCount}"]`);
+          if (newRow) {
+            newRow.dataset.rowId = rowCount;
+            newRow.querySelector('.text-xs.sm\\:text-sm.font-bold.text-gray-500.bg-gray-100.px-2.py-1.rounded')?.replaceWith(
+              document.createTextNode(`Item #${rowCount}`)
+            );
+          }
+        });
+      }
+    }
+
+    // Bersihkan sessionStorage setelah submit berhasil
+    function clearFormState() {
+      sessionStorage.removeItem("formState");
+    }
+    // ===========================================
+
     function addRow() {
       const container = document.getElementById("itemsContainer");
       rowCount++;
@@ -234,6 +312,15 @@ Total 35000"
 
     addRow();
 
+    // Load saved form state from sessionStorage
+    loadFormState();
+
+    // Save form state on input changes (event delegation for dynamic rows)
+    document.getElementById("orderForm").addEventListener("input", function (e) {
+      // Debounce: skip if another save is pending
+      saveFormState();
+    });
+
     // Form submission handler
     document
       .getElementById("orderForm")
@@ -310,6 +397,9 @@ Total 35000"
 
         // Tampilkan report
         showReport(laporan);
+
+        // Hapus data dari sessionStorage setelah submit berhasil
+        clearFormState();
       });
 
     function showReport(laporan) {
@@ -344,6 +434,8 @@ Total 35000"
     function backToForm() {
       document.getElementById("reportContainer").classList.add("hidden");
       document.getElementById("formContainer").classList.remove("hidden");
+      // Reset saved form state so the form starts fresh
+      clearFormState();
     }
 
     function resetForm() {
