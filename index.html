@@ -203,19 +203,13 @@ Total 35000"
 
         // Sort items by number ascending, then prepend (so newest stays on top)
         const sorted = [...state.items].sort((a, b) => a.number - b.number);
+
+        // Reset counter supaya penomoran mengikuti nomor yang tersimpan
         rowCount = 0;
 
         sorted.forEach((item) => {
-          rowCount++;
-          addRowWithData(item.jumlah, item.satuan, item.nama, item.harga);
-          // Set the number label
-          const newRow = document.querySelector(`#itemsContainer > div[data-row-id="${rowCount}"]`);
-          if (newRow) {
-            newRow.dataset.rowId = rowCount;
-            newRow.querySelector('.text-xs.sm\\:text-sm.font-bold.text-gray-500.bg-gray-100.px-2.py-1.rounded')?.replaceWith(
-              document.createTextNode(`Item #${rowCount}`)
-            );
-          }
+          // Gunakan item.number yang sudah disimpan agar nomor tidak berubah
+          addRowWithData(item.jumlah, item.satuan, item.nama, item.harga, item.number);
         });
       }
     }
@@ -447,6 +441,8 @@ Total 35000"
         document.getElementById("catatanDetails").removeAttribute("open");
         rowCount = 0;
         addRow();
+        // Hapus data dari sessionStorage saat mereset form
+        clearFormState();
       }
     }
 
@@ -586,21 +582,28 @@ Total 35000"
       }
     }
 
-    function addRowWithData(jumlah, satuan, nama, harga) {
+    function addRowWithData(jumlah, satuan, nama, harga, rowId) {
       const container = document.getElementById("itemsContainer");
-      rowCount++;
+      // Jika rowId diberikan (saat restore dari sessionStorage), gunakan nomor itu.
+      // Jika tidak, buat nomor baru dari counter.
+      if (rowId === undefined) {
+        rowCount++;
+        rowId = rowCount;
+      } else {
+        rowCount = Math.max(rowCount, rowId);
+      }
 
       const itemDiv = document.createElement("div");
       itemDiv.className =
         "bg-white rounded-lg shadow-md p-4 mb-4 border-l-4 border-blue-500 transition hover:shadow-lg";
-      itemDiv.dataset.rowId = rowCount;
+      itemDiv.dataset.rowId = rowId;
 
       itemDiv.innerHTML = `
                 <div class="space-y-3">
                     <!-- Row number -->
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs sm:text-sm font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Item #${rowCount}</span>
-                        <button type="button" onclick="removeRow(${rowCount})" class="text-red-500 hover:text-red-700 text-sm font-semibold">Hapus</button>
+                        <span class="text-xs sm:text-sm font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Item #${rowId}</span>
+                        <button type="button" onclick="removeRow(${rowId})" class="text-red-500 hover:text-red-700 text-sm font-semibold">Hapus</button>
                     </div>
 
                     <!-- Nama Barang -->
